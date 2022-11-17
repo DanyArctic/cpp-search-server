@@ -70,8 +70,8 @@ public:
         const vector<string> words = SplitIntoWordsNoStop(document);
         for (const string& word : words)
         {
-            double term_frequency = 1.0 / words.size();
-            word_to_document_freqs_[word][document_id] += term_frequency;
+            double TermFrequency = 1.0 / static_cast<double>(words.size());
+            word_to_document_freqs_[word][document_id] += TermFrequency;
         }
         document_count_++;
     }
@@ -151,7 +151,7 @@ private:
 
     double InverseDocumentFrequency(const int number_of_matches) const
     {
-        return (double)log((double)document_count_ / (double)number_of_matches);
+        return log(static_cast<double>(document_count_) / static_cast<double>(number_of_matches));
     }
 
     vector<Document> FindAllDocuments(const Query& query_words) const
