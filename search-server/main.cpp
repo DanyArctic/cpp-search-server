@@ -70,13 +70,8 @@ public:
         const vector<string> words = SplitIntoWordsNoStop(document);
         for (const string& word : words)
         {
-            int same_word_in_document = 1;
-            if (word_to_document_freqs_.count(word) && word_to_document_freqs_.at(word).count(document_id))
-            {
-                same_word_in_document++;
-            }
-            // cout << '\n' << "added: " << word << " same_word_in_document: "s << same_word_in_document << " words.size: " << words.size() << " ID: " << document_id << " TF: " << TermFrequency(same_word_in_document, words.size()) << endl;
-            word_to_document_freqs_[word][document_id] = TermFrequency(same_word_in_document, words.size());
+            double term_frequency = 1.0 / words.size();
+            word_to_document_freqs_[word][document_id] += term_frequency;
         }
         document_count_++;
     }
@@ -159,11 +154,6 @@ private:
         return (double)log((double)document_count_ / (double)number_of_matches);
     }
 
-    double TermFrequency(const int query_in_document, const int total_words_in_document) const
-    {
-        return (double)query_in_document / (double)total_words_in_document;
-    }
-
     vector<Document> FindAllDocuments(const Query& query_words) const
     {
         map<int, double> relevance_table;
@@ -173,20 +163,13 @@ private:
             {
                 int number_of_matches = word_to_document_freqs_.at(word).size();
                 double IDF = InverseDocumentFrequency(number_of_matches);
-                //cout << "word: "s << word << " num of matches: "s << number_of_matches <<  " idf: "s  << IDF << "docs: "s << document_count_ << " "s << (double)document_count_/(double)number_of_matches << endl;
                 for (const auto& [id, TF] : word_to_document_freqs_.at(word))
                 {
-                    //cout << "IDF = "s << IDF << " "s << "TF = " << TF << endl;
                     relevance_table[id] += IDF * TF;
                 }
             }
         }
-        /*for (const auto& map_item : relevance_table)
-           {
-             cout << "print relevance table: " << endl;
 
-             cout << map_item.first << '\t' << map_item.second << endl;
-           }*/
         vector<Document> matched_documents;
         for (const auto& map_item : relevance_table)
         {
@@ -219,5 +202,4 @@ int main()
         cout << "{ document_id = "s << document_id << ", "
             << "relevance = "s << relevance << " }"s << endl;
     }
-    //search_server.PrintDocuments();
 }
