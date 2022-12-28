@@ -107,33 +107,28 @@ public:
 	explicit SearchServer(const StringContainer& stop_words)
 		: stop_words_(MakeUniqueNonEmptyStrings(stop_words))
 	{
-		for (const auto& word : stop_words)
-		{
-			if (!IsValidWord(word))
+		if(all_of(stop_words.begin(), stop_words.end(), [](const string& word)
 			{
-				throw invalid_argument("Invalid character in stop words"s);
-			}
-		}
-	}
-
-	explicit SearchServer(const string& stop_words_text)
-		: SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
-	{
-		if (!IsValidWord(stop_words_text))
+				return !IsValidWord(word);
+			}))
 		{
 			throw invalid_argument("Invalid character in stop words"s);
 		}
 	}
 
+	explicit SearchServer(const string& stop_words_text)
+		: SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
+	{}
+
 	int GetDocumentId(int index) const
 	{
-		if (index > DocumentsIdsCount_.size() - 1)
+		if (static_cast<size_t>(index) > documents_ids_count_.size() - 1)
 		{
 			throw out_of_range("The index of the passed document is out of range"s);
 		}
 		else
 		{
-			return DocumentsIdsCount_[index];
+			return documents_ids_count_[index];
 		}
 	}
 
@@ -144,18 +139,6 @@ public:
 			throw invalid_argument("Wrong document ID"s);
 		}
 		const vector<string> words = SplitIntoWordsNoStop(document);
-		for (const string& word : words)
-		{
-			if (!IsValidWord(word))
-			{
-				throw invalid_argument("Invalid symbols in document"s);
-			}
-			if (ContainsInvalidDashes(word))
-			{
-				throw invalid_argument("Invalid dashes in document"s);
-
-			}
-		}
 		const double inv_word_count = 1.0 / words.size(); // First stage of calculating TF
 		for (const string& word : words)
 
@@ -163,17 +146,13 @@ public:
 			word_to_document_freqs_[word][document_id] += inv_word_count; // Final calculating TF of each word
 		}
 		documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
-		DocumentsIdsCount_.push_back(document_id); // I don't find a need to use this container and associated method yet
+		documents_ids_count_.push_back(document_id); // I don't find a need to use this container and associated method yet
 	}
 
 	template <typename DocumentPredicate>
 	vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const
 	{
 		const Query query = ParseQuery(raw_query);
-		if (query.is_query_valid == false)
-		{
-			throw invalid_argument("Invalid query"s);
-		}
 		vector matched_documents = FindAllDocuments(query, document_predicate);
 
 		sort(matched_documents.begin(), matched_documents.end(),
@@ -216,10 +195,6 @@ public:
 	tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const
 	{
 		const Query query = ParseQuery(raw_query);
-		if (query.is_query_valid == false)
-		{
-			throw invalid_argument("Invalid query"s);
-		}
 		vector<string> matched_words;
 		for (const string& word : query.plus_words)
 		{
@@ -256,7 +231,7 @@ private:
 	const set<string> stop_words_;
 	map<string, map<int, double>> word_to_document_freqs_; // Table of [words]: IDs and Term Frequencies
 	map<int, DocumentData> documents_;
-	vector<int> DocumentsIdsCount_;
+	vector<int> documents_ids_count_;
 
 	static bool IsValidWord(const string& word)
 	{
@@ -269,18 +244,11 @@ private:
 
 	static bool ContainsInvalidDashes(const string& word)
 	{
-		// A valid word must not contain double dashes and dashes without word afterwards
-		if (word[word.size() - 1] == '-')
+		if (word.size() == static_cast<size_t>(1) && word[0] == '-' || word[0] == '-' && word[1] == '-')
 		{
 			return true;
 		}
-		for (size_t i = 0; i < word.size() - 1; ++i)
-		{
-			if (word[i] == '-' && word[i + 1] == '-')
-			{
-				return true;
-			}
-		}
+		// A valid word must not contain double dashes and dashes without word afterwards
 		return false;
 	}
 
@@ -294,6 +262,10 @@ private:
 		vector<string> words;
 		for (const string& word : SplitIntoWords(text))
 		{
+			if (!IsValidWord(word))
+			{
+				throw invalid_argument("Invalid symbols in document"s);
+			}
 			if (!IsStopWord(word))
 			{
 				words.push_back(word);
@@ -328,6 +300,10 @@ private:
 	{
 		bool is_minus = false;
 		bool is_valid = true;
+		if (ContainsInvalidDashes(text))
+		{
+			is_valid = false;
+		}
 		// Word shouldn't be empty
 		if (text[0] == '-')
 		{
@@ -335,17 +311,9 @@ private:
 			{
 				is_minus = true;
 				text = text.substr(1);
-				if (ContainsInvalidDashes(text))
-				{
-					is_valid = false;
-				}
 			}
 		}
 		if (!IsValidWord(text))
-		{
-			is_valid = false;
-		}
-		if (ContainsInvalidDashes(text))
 		{
 			is_valid = false;
 		}
@@ -356,7 +324,6 @@ private:
 	{
 		set<string> plus_words;
 		set<string> minus_words;
-		bool is_query_valid = true;
 	};
 
 	Query ParseQuery(const string& text) const
@@ -367,8 +334,7 @@ private:
 			const QueryWord query_word = ParseQueryWord(word);
 			if (query_word.is_valid == false)
 			{
-				query.is_query_valid = false;
-				break;
+				throw invalid_argument("Invalid query"s);
 			}
 			if (!query_word.is_stop)
 			{
@@ -718,7 +684,7 @@ void TestSearchServer()
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	TestSearchServer();
+	//TestSearchServer();
 	// If this line appears, then all tests were successful
 	cout << "Search server testing finished"s << endl;
 
@@ -746,7 +712,7 @@ int main()
 		}
 		//search_server.AddDocument(1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
 		//search_server.AddDocument(-1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
-		//search_server.AddDocument(3, "большой пёс скво\x12рец"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
+		//search_server.AddDocument(4, "большой пёс скво\x12рец"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
 		//search_server.FindTopDocuments("--пушистый"s);
 		//search_server.GetDocumentId(44);
 	}
