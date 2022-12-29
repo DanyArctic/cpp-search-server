@@ -107,9 +107,9 @@ public:
 	explicit SearchServer(const StringContainer& stop_words)
 		: stop_words_(MakeUniqueNonEmptyStrings(stop_words))
 	{
-		if(all_of(stop_words.begin(), stop_words.end(), [](const string& word)
+		if(!all_of(stop_words.begin(), stop_words.end(), [](const string& word)
 			{
-				return !IsValidWord(word);
+				return IsValidWord(word);
 			}))
 		{
 			throw invalid_argument("Invalid character in stop words"s);
@@ -280,11 +280,7 @@ private:
 		{
 			return 0;
 		}
-		int rating_sum = 0;
-		for (const int rating : ratings)
-		{
-			rating_sum += rating;
-		}
+		int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
 		return rating_sum / static_cast<int>(ratings.size());
 	}
 
@@ -684,7 +680,7 @@ void TestSearchServer()
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	//TestSearchServer();
+	TestSearchServer();
 	// If this line appears, then all tests were successful
 	cout << "Search server testing finished"s << endl;
 
