@@ -107,10 +107,7 @@ public:
 	explicit SearchServer(const StringContainer& stop_words)
 		: stop_words_(MakeUniqueNonEmptyStrings(stop_words))
 	{
-		if(!all_of(stop_words.begin(), stop_words.end(), [](const string& word)
-			{
-				return IsValidWord(word);
-			}))
+		if(!all_of(stop_words.begin(), stop_words.end(), IsValidWord))
 		{
 			throw invalid_argument("Invalid character in stop words"s);
 		}
@@ -244,7 +241,7 @@ private:
 
 	static bool ContainsInvalidDashes(const string& word)
 	{
-		if (word.size() == static_cast<size_t>(1) && word[0] == '-' || word[0] == '-' && word[1] == '-')
+		if (word.size() == 1u && word[0] == '-' || word[0] == '-' && word[1] == '-')
 		{
 			return true;
 		}
@@ -289,16 +286,14 @@ private:
 		string data;
 		bool is_minus;
 		bool is_stop;
-		bool is_valid;
 	};
 
 	QueryWord ParseQueryWord(string text) const
 	{
 		bool is_minus = false;
-		bool is_valid = true;
 		if (ContainsInvalidDashes(text))
 		{
-			is_valid = false;
+			throw invalid_argument("Invalid query"s);
 		}
 		// Word shouldn't be empty
 		if (text[0] == '-')
@@ -311,9 +306,9 @@ private:
 		}
 		if (!IsValidWord(text))
 		{
-			is_valid = false;
+			throw invalid_argument("Invalid query"s);
 		}
-		return { text, is_minus, IsStopWord(text), is_valid }; // Write all data to the QueryWord structure
+		return { text, is_minus, IsStopWord(text) }; // Write all data to the QueryWord structure
 	}
 
 	struct Query
@@ -328,17 +323,13 @@ private:
 		for (const string& word : SplitIntoWords(text))
 		{
 			const QueryWord query_word = ParseQueryWord(word);
-			if (query_word.is_valid == false)
-			{
-				throw invalid_argument("Invalid query"s);
-			}
 			if (!query_word.is_stop)
 			{
 				if (query_word.is_minus)
 				{
 					query.minus_words.insert(query_word.data);
 				}
-				else if (query_word.is_valid)
+				else
 				{
 					query.plus_words.insert(query_word.data);
 				}
@@ -709,7 +700,7 @@ int main()
 		//search_server.AddDocument(1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
 		//search_server.AddDocument(-1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
 		//search_server.AddDocument(4, "большой пёс скво\x12рец"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
-		//search_server.FindTopDocuments("--пушистый"s);
+		search_server.FindTopDocuments("--пушистый"s);
 		//search_server.GetDocumentId(44);
 	}
 	catch (const invalid_argument& argument)
