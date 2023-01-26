@@ -5,6 +5,7 @@
 #include <numeric>
 #include <vector>
 #include <string>
+#include <deque>
 #include <cmath>
 #include <map>
 #include <set>
@@ -45,7 +46,7 @@ vector<string> SplitIntoWords(const string& text)
 		{
 			if (!word.empty())
 			{
-				words.push_back(word);
+				words.emplace_back(word);
 				word.clear();
 			}
 		}
@@ -56,7 +57,7 @@ vector<string> SplitIntoWords(const string& text)
 	}
 	if (!word.empty())
 	{
-		words.push_back(word);
+		words.emplace_back(word);
 	}
 
 	return words;
@@ -77,6 +78,16 @@ struct Document
 	double relevance = 0.0;
 	int rating = 0;
 };
+
+ostream& operator<<(ostream &output, const Document &document)
+{
+	output << "{ "s
+		<< "document_id = "s << document.id << ", "s
+		<< "relevance = "s << document.relevance << ", "s
+		<< "rating = "s << document.rating
+		<< " }"s;
+	return output;
+}
 
 enum class DocumentStatus
 {
@@ -107,7 +118,7 @@ public:
 	explicit SearchServer(const StringContainer& stop_words)
 		: stop_words_(MakeUniqueNonEmptyStrings(stop_words))
 	{
-		if(!all_of(stop_words.begin(), stop_words.end(), IsValidWord))
+		if (!all_of(stop_words.begin(), stop_words.end(), IsValidWord))
 		{
 			throw invalid_argument("Invalid character in stop words"s);
 		}
@@ -115,7 +126,8 @@ public:
 
 	explicit SearchServer(const string& stop_words_text)
 		: SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
-	{}
+	{
+	}
 
 	int GetDocumentId(int index) const
 	{
@@ -201,7 +213,7 @@ public:
 			}
 			if (word_to_document_freqs_.at(word).count(document_id))
 			{
-				matched_words.push_back(word);
+				matched_words.emplace_back(word);
 			}
 		}
 		for (const string& word : query.minus_words)
@@ -241,7 +253,7 @@ private:
 
 	static bool ContainsInvalidDashes(const string& word)
 	{
-		if (word.size() == 1u && word[0] == '-' || word[0] == '-' && word[1] == '-')
+		if ((word.size() == 1u && word[0] == '-') || (word[0] == '-' && word[1] == '-'))
 		{
 			return true;
 		}
@@ -265,7 +277,7 @@ private:
 			}
 			if (!IsStopWord(word))
 			{
-				words.push_back(word);
+				words.emplace_back(word);
 			}
 		}
 		return words;
@@ -387,6 +399,106 @@ private:
 	}
 };
 
+template <typename Iterator>
+class IteratorRange
+{
+public:
+	IteratorRange(const Iterator begin, const Iterator end)
+		: begin_(begin),
+		  end_(end),
+		  size_(distance(begin_, end_))
+	{}
+
+	auto Begin() const
+	{
+		return begin_;
+	}
+	auto End() const
+	{
+		return end_;
+	}
+	size_t Size() const
+	{
+		return distance(begin_, end_);
+	}
+
+private:
+	Iterator begin_;
+	Iterator end_;
+	size_t size_;
+};
+
+//template <typename Iterator>
+//struct IteratorRange
+//{
+//	Iterator begin;
+//	Iterator end;
+//	IteratorRange(Iterator begin, Iterator end) :begin(begin), end(end) {}
+//};
+
+template <typename Iterator>
+class Paginator
+{
+public:
+	Paginator(Iterator begin, Iterator end, const size_t page_size)
+	{
+		Iterator left = begin;
+		Iterator right = begin;
+		
+		while (size_t(distance(right, end)) > page_size)
+		{
+			advance(right, page_size);
+			pages_.push_back(IteratorRange(left, right));
+			left = right;
+		}
+
+		if (right != end)
+		{
+			pages_.push_back(IteratorRange(right, end));
+		}
+	}
+
+	auto begin() const
+	{
+		return pages_.begin();
+	}
+
+	auto end() const
+	{
+		return pages_.end();
+	}
+
+	auto size() const
+	{
+		return pages_.size();
+	}
+
+private:
+	vector<IteratorRange<Iterator>> pages_;
+};
+
+template <typename Container>
+auto Paginate(const Container& c, size_t page_size)
+{
+	return Paginator(begin(c), end(c), page_size);
+}
+
+template <typename Iterator>
+void PrintRange(Iterator begin, Iterator end)
+{
+	for (auto it = begin; it != end; ++it)
+	{
+		cout << *it;
+	}
+}
+
+template<typename Iterator>
+ostream& operator<< (ostream& output, IteratorRange<Iterator> it_range)
+{
+	PrintRange(it_range.Begin(), it_range.End());
+	return output;
+}
+
 void PrintDocument(const Document& document)
 {
 	cout << "{ "s
@@ -395,6 +507,41 @@ void PrintDocument(const Document& document)
 		<< "rating = "s << document.rating
 		<< " }"s << endl;
 }
+
+//class RequestQueue
+//{
+//public:
+//	explicit RequestQueue(const SearchServer& search_server)
+//	{
+//		// напишите реализацию
+//	}
+//	// сделаем "обёртки" для всех методов поиска, чтобы сохранять результаты для нашей статистики
+//	template <typename DocumentPredicate>
+//	vector<Document> AddFindRequest(const string& raw_query, DocumentPredicate document_predicate)
+//	{
+//		// напишите реализацию
+//	}
+//	vector<Document> AddFindRequest(const string& raw_query, DocumentStatus status)
+//	{
+//		// напишите реализацию
+//	}
+//	vector<Document> AddFindRequest(const string& raw_query)
+//	{
+//		// напишите реализацию
+//	}
+//	int GetNoResultRequests() const
+//	{
+//		// напишите реализацию
+//	}
+//private:
+//	struct QueryResult
+//	{
+//		// определите, что должно быть в структуре
+//	};
+//	deque<QueryResult> requests_;
+//	const static int min_in_day_ = 1440;
+//	// возможно, здесь вам понадобится что-то ещё
+//};
 
 template <typename FUNC>
 void RunTestImpl(FUNC test_function, const string& func_name)
@@ -700,7 +847,7 @@ int main()
 		//search_server.AddDocument(1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
 		//search_server.AddDocument(-1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, { 1, 2 });
 		//search_server.AddDocument(4, "большой пёс скво\x12рец"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
-		search_server.FindTopDocuments("--пушистый"s);
+		//search_server.FindTopDocuments("--пушистый"s);
 		//search_server.GetDocumentId(44);
 	}
 	catch (const invalid_argument& argument)
@@ -711,5 +858,71 @@ int main()
 	{
 		cout << "out_of_range: "s << value.what() << endl;
 	}
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	try
+	{
+		SearchServer search_server("and with"s);
+		search_server.AddDocument(1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+		search_server.AddDocument(2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+		search_server.AddDocument(3, "big cat nasty hair"s, DocumentStatus::ACTUAL, { 1, 2, 8 });
+		search_server.AddDocument(4, "big dog cat Vladislav"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
+		search_server.AddDocument(5, "big dog hamster Borya"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
+		const auto search_results = search_server.FindTopDocuments("curly dog"s);
+		int page_size = 2;
+		const auto pages = Paginate(search_results, page_size);
+		// Выводим найденные документы по страницам
+		for (auto page = pages.begin(); page != pages.end(); ++page)
+		{
+			cout << *page << endl;
+			cout << "Page break"s << endl;
+		}
+	}
+	catch (const invalid_argument& argument)
+	{
+		cout << "invalid_argument: "s << argument.what() << endl;
+	}
+	catch (const out_of_range& value)
+	{
+		cout << "out_of_range: "s << value.what() << endl;
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	//try
+	//{
+	//	SearchServer search_server("and in at"s);
+	//	RequestQueue request_queue(search_server);
+	//	search_server.AddDocument(1, "curly cat curly tail"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+	//	search_server.AddDocument(2, "curly dog and fancy collar"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+	//	search_server.AddDocument(3, "big cat fancy collar "s, DocumentStatus::ACTUAL, { 1, 2, 8 });
+	//	search_server.AddDocument(4, "big dog sparrow Eugene"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
+	//	search_server.AddDocument(5, "big dog sparrow Vasiliy"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
+	//	// 1439 запросов с нулевым результатом
+	//	for (int i = 0; i < 1439; ++i)
+	//	{
+	//		request_queue.AddFindRequest("empty request"s);
+	//	}
+	//	// все еще 1439 запросов с нулевым результатом
+	//	request_queue.AddFindRequest("curly dog"s);
+	//	// новые сутки, первый запрос удален, 1438 запросов с нулевым результатом
+	//	request_queue.AddFindRequest("big collar"s);
+	//	// первый запрос удален, 1437 запросов с нулевым результатом
+	//	request_queue.AddFindRequest("sparrow"s);
+	//	cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << endl;
+	//}
+	//catch (const invalid_argument& argument)
+	//{
+	//	cout << "invalid_argument: "s << argument.what() << endl;
+	//}
+	//catch (const out_of_range& value)
+	//{
+	//	cout << "out_of_range: "s << value.what() << endl;
+	//}
 	return 0;
 }
