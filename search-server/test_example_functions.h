@@ -9,6 +9,8 @@
 #define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
 #define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, (hint))
 
+using namespace std;
+
 template <typename FUNC>
 void RunTestImpl(FUNC test_function, const std::string& func_name)
 {
@@ -46,4 +48,4 @@ void TestRatingCalc();
 void TestFilterDocumentsByUsingPredicate();
 void TestSearchDocsByStatus();
 void TestRelevanceCalculate();
-void TestSearchServer();
+void TestSearchServer();	

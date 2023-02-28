@@ -4,16 +4,31 @@
 
 using namespace std;
 
-int SearchServer::GetDocumentId(int index) const
+std::vector<int>::iterator SearchServer::begin()
 {
-	if (static_cast<size_t>(index) > documents_ids_count_.size() - 1)
+	return documents_ids_count_.begin();
+}
+
+std::vector<int>::iterator SearchServer::end()
+{
+	return documents_ids_count_.end();
+}
+
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const
+{
+	static std::map<std::string, double> empty_map;
+	return document_to_word_freqs_.count(document_id) == 0 ? empty_map : document_to_word_freqs_.at(document_id);
+}
+
+void SearchServer::RemoveDocument(int document_id)
+{
+	documents_.erase(document_id);
+	for (auto& [word, id_and_freq] : word_to_document_freqs_)
 	{
-		throw out_of_range("The index of the passed document is out of range"s);
+		id_and_freq.erase(document_id);
 	}
-	else
-	{
-		return documents_ids_count_[index];
-	}
+	documents_ids_count_.erase(find(documents_ids_count_.begin(), documents_ids_count_.end(), document_id));
+	words_n_ids_.erase(document_id);
 }
 
 void SearchServer::AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings)
@@ -23,11 +38,13 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
 		throw invalid_argument("Wrong document ID"s);
 	}
 	const std::vector<std::string> words = SplitIntoWordsNoStop(document);
+	std::set<std::string> words_set{ words.begin(), words.end() };
+	words_n_ids_.emplace(document_id, words_set);
 	const double inv_word_count = 1.0 / words.size(); // First stage of calculating TF
 	for (const std::string& word : words)
-
 	{
 		word_to_document_freqs_[word][document_id] += inv_word_count; // Final calculating TF of each word
+		//document_to_word_freqs_[document_id][word] += word_to_document_freqs_[word][document_id];
 	}
 	documents_.emplace(document_id, SearchServer::DocumentData{ ComputeAverageRating(ratings), status });
 	documents_ids_count_.push_back(document_id); // I don't find a need to use this container and associated method yet
@@ -53,6 +70,7 @@ int SearchServer::GetDocumentCount() const
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const
 {
+	//LOG_DURATION_STREAM("Operation time: ", std::cout);
 	const SearchServer::Query query = ParseQuery(raw_query);
 	std::vector<std::string> matched_words;
 	for (const std::string& word : query.plus_words)
@@ -79,6 +97,11 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
 		}
 	}
 	return std::make_tuple(matched_words, documents_.at(document_id).status);
+}
+
+std::map<int, std::set<std::string>> SearchServer::GetDocuments()
+{
+	return words_n_ids_;
 }
 
 bool SearchServer::IsValidWord(const std::string& word)
@@ -179,4 +202,9 @@ SearchServer::Query SearchServer::ParseQuery(const std::string& text) const
 double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) const
 {
 	return std::log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
+}
+
+void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings)
+{
+	search_server.AddDocument(document_id, document, status, ratings);
 }

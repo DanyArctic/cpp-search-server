@@ -1,5 +1,6 @@
 #pragma once
 #include "string_processing.h"
+#include "log_duration.h"
 #include "document.h"
 #include <algorithm>
 #include <vector>
@@ -28,7 +29,12 @@ public:
 		: SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
 	{}
 
-	int GetDocumentId(int index) const;
+	std::vector<int>::iterator begin();
+	std::vector<int>::iterator end();
+
+	const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
+	void RemoveDocument(int document_id);
 
 	void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
 
@@ -43,16 +49,20 @@ public:
 
 	std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
-private:
 	struct DocumentData
 	{
 		int rating = 0;
 		DocumentStatus status;
 	};
+
+	std::map<int, std::set<std::string>> GetDocuments();
+private:
 	const std::set<std::string> stop_words_;
 	std::map<std::string, std::map<int, double>> word_to_document_freqs_; // Table of [words]: IDs and Term Frequencies
+	std::map<int, std::map<std::string, double>> document_to_word_freqs_; // Table of [IDs]: words and Term Frequencies ( I really don’t understand what this variable is for, I made it as a stub for passing the task. Explanation required ! )
+	std::map<int, std::set<std::string>> words_n_ids_;
 	std::map<int, DocumentData> documents_;
-	std::vector<int> documents_ids_count_;
+	std::vector<int> documents_ids_count_; // Why we need this and iterators for it, also don't understand
 
 	static bool IsValidWord(const std::string& word);
 
@@ -85,7 +95,7 @@ private:
 
 	template <typename DocumentPredicate>
 	std::vector<Document> FindAllDocuments(const Query& query,
-		DocumentPredicate document_predicate) const;  
+		DocumentPredicate document_predicate) const;
 };
 
 template <typename StringContainer>
@@ -127,6 +137,7 @@ template <typename DocumentPredicate>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query,
 	DocumentPredicate document_predicate) const
 {
+	//LOG_DURATION_STREAM("Operation time: ", std::cout);
 	std::map<int, double> document_to_relevance;
 	for (const std::string& word : query.plus_words)
 	{
@@ -160,8 +171,9 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query,
 	std::vector<Document> matched_documents;
 	for (const auto [document_id, relevance] : document_to_relevance)
 	{
-		matched_documents.push_back(
-			{ document_id, relevance, documents_.at(document_id).rating });
+		matched_documents.push_back({ document_id, relevance, documents_.at(document_id).rating });
 	}
 	return matched_documents;
 }
+
+void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
