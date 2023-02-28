@@ -33,6 +33,7 @@
 
 # VS files
 */Debug/*
+*/Release/*
 */.vs/*
 *.filters
 *.vcxproj
