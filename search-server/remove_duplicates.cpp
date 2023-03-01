@@ -4,17 +4,22 @@
 
 void RemoveDuplicates(SearchServer& search_server)
 {
-	auto documents = search_server.GetDocuments();
 	std::set<int> ids_to_remove;
-	for (auto it = documents.begin(); it != documents.end(); it = next(it))
+	auto documents = search_server.GetDocuments();
+	std::set <std::set<std::string>> words;
+	size_t documents_quantity = words.size();
+	for (int id : search_server)
 	{
-		for (auto internal_it = next(it); internal_it != documents.end(); internal_it = next(internal_it))
+		words.emplace(documents[id]);
+		if (documents_quantity == words.size())
 		{
-			if (it->second == internal_it->second)
-			{
-				std::cout << "Found duplicate document id " << internal_it->first << std::endl;
-				ids_to_remove.emplace(internal_it->first);
-			}
+			search_server.RemoveDocument(id);
+			std::cout << "Found duplicate document id " << id << std::endl;
+			continue;
+		}
+		else
+		{
+			++documents_quantity;
 		}
 	}
 	for (int id : ids_to_remove)

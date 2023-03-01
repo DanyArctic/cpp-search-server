@@ -55,7 +55,7 @@ public:
 		DocumentStatus status;
 	};
 
-	std::map<int, std::set<std::string>> GetDocuments();
+	std::map<int, std::set<std::string>> &GetDocuments();
 private:
 	const std::set<std::string> stop_words_;
 	std::map<std::string, std::map<int, double>> word_to_document_freqs_; // Table of [words]: IDs and Term Frequencies

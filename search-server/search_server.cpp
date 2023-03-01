@@ -27,7 +27,7 @@ void SearchServer::RemoveDocument(int document_id)
 	{
 		id_and_freq.erase(document_id);
 	}
-	documents_ids_count_.erase(find(documents_ids_count_.begin(), documents_ids_count_.end(), document_id));
+	std::remove(documents_ids_count_.begin(), documents_ids_count_.end(), document_id);
 	words_n_ids_.erase(document_id);
 }
 
@@ -44,7 +44,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
 	for (const std::string& word : words)
 	{
 		word_to_document_freqs_[word][document_id] += inv_word_count; // Final calculating TF of each word
-		//document_to_word_freqs_[document_id][word] += word_to_document_freqs_[word][document_id];
+		document_to_word_freqs_[document_id][word] += word_to_document_freqs_[word][document_id];
 	}
 	documents_.emplace(document_id, SearchServer::DocumentData{ ComputeAverageRating(ratings), status });
 	documents_ids_count_.push_back(document_id); // I don't find a need to use this container and associated method yet
@@ -99,7 +99,7 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
 	return std::make_tuple(matched_words, documents_.at(document_id).status);
 }
 
-std::map<int, std::set<std::string>> SearchServer::GetDocuments()
+std::map<int, std::set<std::string>> &SearchServer::GetDocuments()
 {
 	return words_n_ids_;
 }
