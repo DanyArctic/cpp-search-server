@@ -71,10 +71,14 @@ SearchServer AddFewDocsForTests()
 {
 	SearchServer search_server("and in on with"s);
 	search_server.AddDocument(0, "white cat with fancy white collar"s, DocumentStatus::ACTUAL, { 8, -3 });
+	ASSERT_EQUAL(*search_server.begin(), 0);
 	search_server.AddDocument(1, "fluffy cat fluffy tail tufts on the ears"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
 	search_server.AddDocument(2, "well-groomed dog expressive eyes"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+	ASSERT_EQUAL(*search_server.begin(), 0);
+	ASSERT_EQUAL(*std::prev(search_server.end()), 2);
 	search_server.AddDocument(3, "well-groomed starling evgeny"s, DocumentStatus::ACTUAL, { 9 });
 	search_server.AddDocument(4, "cute cat with brown eyes"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+	ASSERT_EQUAL(*std::prev(search_server.end()), 4);
 	return search_server;
 }
 
@@ -100,13 +104,17 @@ void TestMatchDocuments()
 {
 	SearchServer test_serv = AddFewDocsForTests();
 	{
-		auto [words, status] = test_serv.MatchDocument("brown cat"s, 4);
+		auto [words, status] = test_serv.MatchDocument("brown cat", 4);
 		ASSERT_EQUAL(words.size(), static_cast<int>(2));
 		ASSERT_EQUAL(words[0], "brown"s);
 		ASSERT_EQUAL(words[1], "cat"s);
 	}
 	{
-		auto [words, status] = test_serv.MatchDocument("dog -eyes"s, 2);
+		auto [words, status] = test_serv.MatchDocument("dog -eyes", 2);
+		ASSERT_EQUAL(words.size(), static_cast<size_t>(0));
+	}
+	{
+		auto [words, status] = test_serv.MatchDocument("dog eyes", 1);
 		ASSERT_EQUAL(words.size(), static_cast<size_t>(0));
 	}
 }

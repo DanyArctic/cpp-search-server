@@ -1,6 +1,8 @@
 #pragma once
 #include "search_server.h"
+#include "log_duration.h"
 #include <string>
+#include <random>
 #include <iostream>
 
 #define RUN_TEST(func) RunTestImpl((func), #func)
@@ -48,4 +50,5 @@ void TestRatingCalc();
 void TestFilterDocumentsByUsingPredicate();
 void TestSearchDocsByStatus();
 void TestRelevanceCalculate();
-void TestSearchServer();	
+void TestSearchServer();
+void ParallelSearchBenchmark();
