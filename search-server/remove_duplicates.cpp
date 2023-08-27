@@ -5,7 +5,6 @@
 void RemoveDuplicates(SearchServer& search_server)
 {
 	std::set<int> ids_to_remove;
-	auto documents = search_server.GetDocuments();
 	std::set <std::set<std::string_view>> words;
 	size_t documents_quantity = words.size();
 	std::map<std::string_view, double> words_freq;

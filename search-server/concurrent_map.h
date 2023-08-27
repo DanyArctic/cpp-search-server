@@ -14,8 +14,8 @@ private:
         std::mutex mutex;
         std::map<Key, Value> map;
     };
-
     std::vector<Bucket> buckets_;
+
 public:
     static_assert(std::is_integral_v<Key>, "ConcurrentMap supports only integer keys"s);
 
@@ -25,8 +25,8 @@ public:
         Value& ref_to_value;
 
         Access(const Key& key, Bucket& bucket)
-            : guard(bucket.mutex),
-            ref_to_value(bucket.map[key])
+            : guard(bucket.mutex)
+            , ref_to_value(bucket.map[key])
         {}
     };
 

@@ -83,11 +83,11 @@ void Test(string_view mark, const SearchServer& search_server, const vector<stri
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	/*
+	
 	TestSearchServer();
 	// If this line appears, then all tests were successful
 	std::cout << "Search server testing finished"s << std::endl;
-
+	
 	try
 	{
 		SearchServer search_server("и в на"s);
@@ -306,7 +306,7 @@ int main()
 	}
 
 	ParallelSearchBenchmark();
-	//ParallelJoinedSearchBenchmark();
+	ParallelJoinedSearchBenchmark();
 
 	//{
 	//	SearchServer search_server("and with"s);
@@ -421,7 +421,7 @@ int main()
 	}
 	TestMatchingDocumentWithPolicy();
 	
-	*/
+	
 
 	{
 		SearchServer search_server("and with"s);
